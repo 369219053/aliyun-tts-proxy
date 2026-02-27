@@ -36,10 +36,10 @@ function generateId() {
  * @param {string} format - 音频格式（mp3 / wav / opus）
  * @returns {Promise<Buffer>} - 合成后的音频二进制数据
  */
-function synthesizeSpeech(text, voice, model, format) {
+function synthesizeSpeech(text, voice, model, format, userApiKey) {
   return new Promise((resolve, reject) => {
-    const apiKey = process.env.DASHSCOPE_API_KEY;
-    if (!apiKey) return reject(new Error('未设置 DASHSCOPE_API_KEY 环境变量'));
+    const apiKey = userApiKey || process.env.DASHSCOPE_API_KEY;
+    if (!apiKey) return reject(new Error('缺少 apikey 参数，且未设置 DASHSCOPE_API_KEY 环境变量'));
 
     // DashScope WebSocket 接入点（中国内地）
     const wsUrl = 'wss://dashscope.aliyuncs.com/api-ws/v1/inference/';
@@ -183,7 +183,8 @@ app.post('/api/tts', async (req, res) => {
       text,
       voice = 'longanyang',          // 音色：系统音色名称 或 声音复刻的 voice_id
       model = 'cosyvoice-v3-flash',  // 模型：与创建复刻音色时的 target_model 保持一致
-      format = 'mp3'
+      format = 'mp3',
+      apikey                         // 用户自己的 DashScope API Key（优先使用，否则用环境变量）
     } = req.body;
 
     if (!text) {
@@ -196,7 +197,7 @@ app.post('/api/tts', async (req, res) => {
     console.log(`[TTS] 开始合成，文本长度: ${text.length}，音色: ${voice}，模型: ${model}`);
 
     // 1. 调用 DashScope CosyVoice WebSocket TTS
-    const audioBuffer = await synthesizeSpeech(text, voice, model, format);
+    const audioBuffer = await synthesizeSpeech(text, voice, model, format, apikey);
     console.log(`[TTS] 合成完成，音频大小: ${audioBuffer.length} bytes`);
 
     // 2. 上传到 Supabase Storage
